@@ -1,13 +1,20 @@
+# BEGIN state
 # fmt: off
 input = [
     0, 0, 0, 0, 0,
-    0, 3, 3, 0, 0,
-    0, 3, 3, 0, 0,
+    0, -3, -3, 0, 0,
+    0, -3, -3, 0, 0,
     0, 0, 0, 0, 0,
     0, 0, 0, 0, 0,
 ]
 # fmt: on
 move = 6
+is_first_round = False
+is_player_one = False
+# END state
+
+# derived convenience variable
+multiplier = 1 if is_player_one else -1
 
 
 def print_board():
@@ -19,7 +26,7 @@ def print_board():
 dirs = (-5, 5, -1, 1)
 
 
-def do_round(spread_from):
+def do_step(spread_from):
     to_cleanup = []
     for i in spread_from:
         # Define adjacent cell conditions
@@ -35,8 +42,8 @@ def do_round(spread_from):
             if not is_valid:
                 continue
             j = i + offset
-            input[j] += 1
-            if input[j] >= 4:
+            input[j] = input[j] * (1 if input[j] ^ multiplier >= 0 else -1) + multiplier
+            if abs(input[j]) >= 4:
                 to_cleanup.append(j)
 
         # cleanup cell
@@ -44,14 +51,25 @@ def do_round(spread_from):
     return to_cleanup
 
 
-def simulate(move):
-    input[move] += 1
-    if input[move] < 4:
-        return
-    spread_from = [move]
-    while len(to_cleanup := do_round(spread_from)) > 0:
-        spread_from = to_cleanup
+def simulate():
+    global is_first_round, is_player_one
+    if is_first_round:
+        if input[move] != 0:
+            raise ValueError("Invalid first round move. Cell already occupied.")
+        input[move] = 3 * multiplier
+        if not is_player_one:
+            is_first_round = False
+    else:
+        if input[move] * multiplier <= 0:
+            raise ValueError("Invalid move. Either opponent's or unclaimed cell.")
+        input[move] += multiplier
+        if abs(input[move]) < 4:
+            return
+        spread_from = [move]
+        while len(to_cleanup := do_step(spread_from)) > 0:
+            spread_from = to_cleanup
+    is_player_one = not is_player_one
 
 
-simulate(move)
+simulate()
 print_board()
