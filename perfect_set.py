@@ -8,8 +8,8 @@ class Node:
 class PerfectSet:
     def __init__(self):
         self.head = None
-        # List of pointers to nodes, index is the data value
-        self.pointers = [None] * 25  # For integers 0-24
+        self.pointers = [None] * 25
+        self._size = 0  # Track size for O(1) length
 
     def add(self, item):
         if not 0 <= item <= 24:
@@ -29,6 +29,7 @@ class PerfectSet:
 
         # Store pointer to node
         self.pointers[item] = new_node
+        self._size += 1
 
     def remove(self, item):
         if not 0 <= item <= 24:
@@ -49,6 +50,21 @@ class PerfectSet:
 
         # Clear pointer
         self.pointers[item] = None
+        self._size -= 1
+
+    def __bool__(self):
+        return self.head is not None
+
+    def __len__(self):
+        return self._size
+
+    def __getitem__(self, index):
+        if not 0 <= index < self._size:
+            raise IndexError("Index out of range")
+        current = self.head
+        for _ in range(index):
+            current = current.next
+        return current.data
 
     def __contains__(self, item):
         if not 0 <= item <= 24:
