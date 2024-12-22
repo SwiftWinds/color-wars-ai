@@ -2,15 +2,15 @@
 # fmt: off
 input = [
     0, 0, 0, 0, 0,
-    0, -3, -3, 0, 0,
-    0, -3, -3, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 6, 0, 0,
     0, 0, 0, 0, 0,
     0, 0, 0, 0, 0,
 ]
 # fmt: on
-move = 6
+move = 12
 is_first_round = False
-is_player_one = False
+is_player_one = True
 # END state
 
 # derived convenience variable
@@ -65,7 +65,7 @@ def simulate():
         input[move] += multiplier
         if abs(input[move]) < 4:
             return
-        spread_from = [move]
+        spread_from = [move] * (abs(input[move]) - 3)
         while len(to_cleanup := do_step(spread_from)) > 0:
             spread_from = to_cleanup
     is_player_one = not is_player_one

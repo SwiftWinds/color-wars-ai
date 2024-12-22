@@ -83,9 +83,13 @@ class Game:
                 # Update territories based on new value
                 if old_value >= 0 and self.board[j] < 0:
                     self.player_1_territory.remove(j)
+                    if not self.player_1_territory:
+                        return []
                     self.player_2_territory.add(j)
                 elif old_value <= 0 and self.board[j] > 0:
                     self.player_2_territory.remove(j)
+                    if not self.player_2_territory:
+                        return []
                     self.player_1_territory.add(j)
 
                 if abs(self.board[j]) >= 4:
