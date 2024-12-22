@@ -1,5 +1,7 @@
 import random
 
+from perfect_set import PerfectSet
+
 
 class GameOverException(Exception):
     """Exception raised when the game is over (no more valid moves available)."""
@@ -13,26 +15,21 @@ class DuplicateOutputException(Exception):
     pass
 
 
+dirs = (-5, 5, -1, 1)
+
+
 class Game:
     def __init__(self):
         self.board = [0] * 25  # Initialize 5x5 board with zeros
         self.is_player_1_turn = True
         self.is_first_round = True
-        self._dirs = (-5, 5, -1, 1)
+        self.player_1_territory = PerfectSet()
+        self.player_2_territory = PerfectSet()
 
     def possible_next_moves(self):
-        moves = []
         if self.is_player_1_turn:
-            # Check for valid player 1 moves (1 to 3)
-            for i, v in enumerate(self.board):
-                if v > 0:
-                    moves.append(i)
-        else:
-            # Check for valid player 2 moves (-3 to -1)
-            for i, v in enumerate(self.board):
-                if v < 0:
-                    moves.append(i)
-        return moves
+            return self.player_1_territory
+        return self.player_2_territory
 
     def play(self, move):
         if self.is_first_round:
@@ -40,6 +37,11 @@ class Game:
                 raise ValueError("Invalid first round move. Cell already occupied.")
             multiplier = 1 if self.is_player_1_turn else -1
             self.board[move] = 3 * multiplier
+            # Add first move to territory
+            if self.is_player_1_turn:
+                self.player_1_territory.add(move)
+            else:
+                self.player_2_territory.add(move)
             if not self.is_player_1_turn:
                 self.is_first_round = False
         else:
@@ -68,19 +70,31 @@ class Game:
             )
 
             # Add valid adjacent cells to queue
-            for is_valid, offset in zip(adjacency_rules, self._dirs):
+            for is_valid, offset in zip(adjacency_rules, dirs):
                 if not is_valid:
                     continue
                 j = i + offset
+                old_value = self.board[j]
                 self.board[j] = (
                     self.board[j] * (1 if self.board[j] ^ multiplier >= 0 else -1)
                     + multiplier
                 )
+
+                # Update territories based on new value
+                if old_value >= 0 and self.board[j] < 0:
+                    self.player_1_territory.remove(j)
+                    self.player_2_territory.add(j)
+                elif old_value <= 0 and self.board[j] > 0:
+                    self.player_2_territory.remove(j)
+                    self.player_1_territory.add(j)
+
                 if abs(self.board[j]) >= 4:
                     to_cleanup.append(j)
 
-            # cleanup cell
+            # cleanup cell and remove from territories
             self.board[i] = 0
+            self.player_1_territory.remove(i)
+            self.player_2_territory.remove(i)
         return to_cleanup
 
 
