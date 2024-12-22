@@ -22,7 +22,7 @@ class Game:
             for _ in range(25):
                 # mask the last 3 bits
                 v = board & 0x7
-                if v <= 2:
+                if 1 <= v <= 3:
                     # shift next_moves left by 3
                     next_moves <<= 3
                     # add v to next_moves
@@ -35,7 +35,7 @@ class Game:
             for _ in range(25):
                 # mask the last 3 bits
                 v = board & 0x7
-                if v >= 4:
+                if v >= 5:
                     # shift next_moves left by 3
                     next_moves <<= 3
                     # add v to next_moves
@@ -92,15 +92,21 @@ def play_n_moves(n):
         game.play(move)
         # add the move to the moves list
         moves[i] = nth_letter(move)
+    # if the game is in a winning state, raise GameOverException
+    if game.possible_next_moves() & 0x1F == 0:
+        raise GameOverException
     return "".join(moves)
 
 
 with open("output.txt", "w") as f:
     for i in range(6000):
-        random_number = random.randint(0, 49)
+        attempts = 1
         while True:
+            moves = random.randint(0, 49)
             try:
-                f.write(play_n_moves(random_number) + "\n")
+                f.write(play_n_moves(moves) + "\n")
                 break
             except GameOverException:
+                print(f"WARN: got GameOverException on try #{attempts} ({moves} moves)")
+                attempts += 1
                 continue
