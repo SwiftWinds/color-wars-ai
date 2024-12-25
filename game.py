@@ -1,4 +1,5 @@
 from perfect_set import PerfectSet
+from perfect_dict import PerfectDict
 
 
 class GameOverException(Exception):
@@ -14,9 +15,12 @@ class Game:
     def __init__(self):
         self.board = [0] * 25  # Initialize 5x5 board with zeros
         self.is_player_1_turn = True
-        self.is_first_round = True
         self.player_1_territory = PerfectSet()
         self.player_2_territory = PerfectSet()
+        self.undo_board_steps = PerfectDict()
+        self.undo_p1_territory_steps = PerfectDict()
+        self.undo_p2_territory_steps = PerfectDict()
+        self.turn_count = 0  # needed to calculate score in negamax
 
     def possible_next_moves(self):
         if self.is_player_1_turn:
@@ -24,7 +28,7 @@ class Game:
         return self.player_2_territory
 
     def play(self, move):
-        if self.is_first_round:
+        if self.turn_count <= 1:  # first round
             if self.board[move] != 0:
                 raise ValueError("Invalid first round move. Cell already occupied.")
             multiplier = 1 if self.is_player_1_turn else -1
@@ -34,8 +38,6 @@ class Game:
                 self.player_1_territory.add(move)
             else:
                 self.player_2_territory.add(move)
-            if not self.is_player_1_turn:
-                self.is_first_round = False
         else:
             multiplier = 1 if self.is_player_1_turn else -1
             if self.board[move] * multiplier <= 0:
@@ -47,6 +49,7 @@ class Game:
             while len(to_cleanup := self._do_step(spread_from)) > 0:
                 spread_from = to_cleanup
         self.is_player_1_turn = not self.is_player_1_turn
+        self.turn_count += 1
 
     def _do_step(self, spread_from):
         to_cleanup = []
