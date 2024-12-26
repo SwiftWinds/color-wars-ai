@@ -29,12 +29,16 @@ def decrement_turn(func):
     return wrapper
 
 
+# we start with a max undo depth of 1000 to minimize resize overhead
+INITIAL_MAX_UNDO_DEPTH = 1000
+
+
 class Game:
     def __init__(self):
         self._board = [0] * 25  # Initialize 5x5 board with zeros
         self._player_1_territory = PerfectSet()
         self._player_2_territory = PerfectSet()
-        self._undo_board_steps = PerfectDict()
+        self._undo_board_steps = [None] * INITIAL_MAX_UNDO_DEPTH
         self.turn_count = 0  # needed to calculate score in negamax
 
     def possible_next_moves(self):
@@ -54,13 +58,15 @@ class Game:
             if self._board[move] != 0:
                 raise ValueError("Invalid first round move. Cell already occupied.")
             multiplier = 1 if self.is_player_1_turn() else -1
-            self._undo_board_steps.clear()
+            if self._undo_board_steps[self.turn_count] is not None:
+                self._undo_board_steps[self.turn_count].clear()
             self._set(move, 3 * multiplier)
         else:
             multiplier = 1 if self.is_player_1_turn() else -1
             if self._board[move] * multiplier <= 0:
                 raise ValueError("Invalid move. Either opponent's or unclaimed cell.")
-            self._undo_board_steps.clear()
+            if self._undo_board_steps[self.turn_count] is not None:
+                self._undo_board_steps[self.turn_count].clear()
             self._add(move, multiplier)
             if abs(self._board[move]) < 4:
                 return
@@ -70,22 +76,31 @@ class Game:
 
     @decrement_turn
     def unplay(self):
-        for i, old_value in self._undo_board_steps.items():
+        for i, old_value in self._undo_board_steps[self.turn_count - 1].items():
             self._set(i, old_value, track=False)
 
     def is_player_1_turn(self):
         return self.turn_count % 2 == 0
 
     def _track(self, i, old_value, new_value):
-        return_to_value = self._undo_board_steps.get(i, None)
+        if self.turn_count == len(self._undo_board_steps):
+            print(f"WARNING: Resizing undo board steps to {self.turn_count + 1}")
+            self._undo_board_steps.append(PerfectDict())
+        elif self.turn_count > len(self._undo_board_steps):
+            raise ValueError(
+                "Undo steps somehow exceeded max undo depth and we didn't automatically resize"
+            )
+        if self._undo_board_steps[self.turn_count] is None:
+            self._undo_board_steps[self.turn_count] = PerfectDict()
+        return_to_value = self._undo_board_steps[self.turn_count].get(i, None)
 
         # Case 1: No edits tracked yet (returnToValue is None)
         if return_to_value is None:
-            self._undo_board_steps[i] = old_value
+            self._undo_board_steps[self.turn_count][i] = old_value
 
         # Case 2: Existing edits tracked (returnToValue is not None)
         elif return_to_value == new_value:  # No longer need cache
-            del self._undo_board_steps[i]
+            del self._undo_board_steps[self.turn_count][i]
 
     def _update_territories(self, i, old_value, new_value):
         if new_value == 0:
