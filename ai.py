@@ -19,3 +19,16 @@ def negamax(P):
             best_score = score
         P.unplay()
     return best_score
+
+
+def get_ai_move(P):
+    best_score = InvertedInt(-P.turn_count)
+    best_move = None
+    for x in P.possible_next_moves():
+        P.play(x)
+        score = -negamax(P)
+        P.unplay()
+        if score > best_score:
+            best_score = score
+            best_move = x
+    return best_move
