@@ -133,6 +133,8 @@ class Game:
                     self._board[j] * (1 if self._board[j] ^ multiplier >= 0 else -1)
                     + multiplier,
                 )
+                if not self._player_1_territory or not self._player_2_territory:
+                    return []
 
                 if abs(self._board[j]) >= 4:
                     to_cleanup.append(j)
