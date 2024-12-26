@@ -16,9 +16,11 @@ def nth_letter(n):
     return chr(ord("a") + n)
 
 
-def process_game(moves, time_limit=5000000):
-    game = Game()
+game = Game()
 
+
+def process_game(moves, time_limit=5000000):
+    game.reset()
     # Play all moves except the last one
     for move in moves:
         pos = ord(move.lower()) - ord("a")
@@ -36,6 +38,7 @@ def process_game(moves, time_limit=5000000):
         return "TLE"
     except Exception as e:
         print(f"Error processing move: {e}")
+        # print(traceback.format_exc())
         return "ERR"
     finally:
         signal.alarm(0)  # Ensure alarm is disabled
@@ -43,7 +46,7 @@ def process_game(moves, time_limit=5000000):
 
 def main():
     with open("dataset.txt", "r") as f_in, open("predictions.txt", "w") as f_out:
-        for line_num, line in enumerate(f_in):
+        for line_num, line in enumerate(f_in, 1):
             moves = line.strip()
             print(f"Processing game {line_num + 1}: {moves}")
 

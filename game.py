@@ -1,5 +1,6 @@
 from perfect_set import PerfectSet
 from perfect_dict import PerfectDict
+import itertools
 
 
 class GameOverException(Exception):
@@ -58,6 +59,13 @@ class Game:
             if self._board[move] != 0:
                 raise ValueError("Invalid first round move. Cell already occupied.")
             multiplier = 1 if self.is_player_1_turn() else -1
+            if self.turn_count == len(self._undo_board_steps):
+                print(f"WARNING: Resizing undo board steps to {self.turn_count + 1}")
+                self._undo_board_steps.append(PerfectDict())
+            elif self.turn_count > len(self._undo_board_steps):
+                raise ValueError(
+                    "Undo steps somehow exceeded max undo depth and we didn't automatically resize"
+                )
             if self._undo_board_steps[self.turn_count] is not None:
                 self._undo_board_steps[self.turn_count].clear()
             self._set(move, 3 * multiplier)
@@ -65,8 +73,7 @@ class Game:
             multiplier = 1 if self.is_player_1_turn() else -1
             if self._board[move] * multiplier <= 0:
                 raise ValueError("Invalid move. Either opponent's or unclaimed cell.")
-            if self._undo_board_steps[self.turn_count] is not None:
-                self._undo_board_steps[self.turn_count].clear()
+            self._prepare_undo_board_steps()
             self._add(move, multiplier)
             if abs(self._board[move]) < 4:
                 return
@@ -82,7 +89,14 @@ class Game:
     def is_player_1_turn(self):
         return self.turn_count % 2 == 0
 
-    def _track(self, i, old_value, new_value):
+    def reset(self):
+        for territory in itertools.chain(
+            self._player_1_territory, self._player_2_territory
+        ):
+            self._set(territory, 0, track=False)
+        self.turn_count = 0
+
+    def _prepare_undo_board_steps(self):
         if self.turn_count == len(self._undo_board_steps):
             print(f"WARNING: Resizing undo board steps to {self.turn_count + 1}")
             self._undo_board_steps.append(PerfectDict())
@@ -90,6 +104,10 @@ class Game:
             raise ValueError(
                 "Undo steps somehow exceeded max undo depth and we didn't automatically resize"
             )
+        if self._undo_board_steps[self.turn_count] is not None:
+            self._undo_board_steps[self.turn_count].clear()
+
+    def _track(self, i, old_value, new_value):
         if self._undo_board_steps[self.turn_count] is None:
             self._undo_board_steps[self.turn_count] = PerfectDict()
         return_to_value = self._undo_board_steps[self.turn_count].get(i, None)
