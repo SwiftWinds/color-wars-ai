@@ -51,6 +51,10 @@ def play_n_moves(n):
     return "".join(moves)
 
 
+# Add counter variables at the top level
+total_attempts = 0
+game_over_count = 0
+
 outputs = set()
 for i in range(6000):
     attempts = 1
@@ -62,6 +66,7 @@ for i in range(6000):
                 raise DuplicateOutputException
         except GameOverException:
             print(f"WARN: got GameOverException on try #{attempts} ({moves} moves)")
+            game_over_count += 1  # Track GameOverException occurrences
             attempts += 1
             continue
         except DuplicateOutputException:
@@ -71,7 +76,14 @@ for i in range(6000):
             attempts += 1
             continue
         outputs.add(output)
+        total_attempts += attempts  # Track total attempts
         break
+
+# Print statistics at the end
+win_percentage = (game_over_count / total_attempts) * 100
+print("\nStatistics:")
+print(f"Total attempts: {total_attempts}")
+print(f"Games won by chance: {game_over_count} ({win_percentage:.2f}%)")
 
 with open("dataset.txt", "w") as f:
     for output in outputs:
