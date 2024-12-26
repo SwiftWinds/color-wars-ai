@@ -26,6 +26,8 @@ class Game:
         return self._player_2_territory
 
     def play(self, move):
+        if not 0 <= move < 25:
+            raise ValueError("Invalid move. Cell out of bounds.")
         if self.turn_count <= 1:  # first round
             if self._board[move] != 0:
                 raise ValueError("Invalid first round move. Cell already occupied.")
@@ -51,6 +53,17 @@ class Game:
         self._is_player_1_turn = not self._is_player_1_turn
         self.turn_count -= 1
 
+    def _track(self, i, old_value, new_value):
+        return_to_value = self._undo_board_steps[old_value]
+
+        # Case 1: No edits tracked yet (returnToValue is None)
+        if return_to_value is None:
+            self._undo_board_steps[i] = old_value
+
+        # Case 2: Existing edits tracked (returnToValue is not None)
+        elif return_to_value == new_value:  # No longer need cache
+            del self._undo_board_steps[i]
+
     def _update_territories(self, i, old_value, new_value):
         if new_value == 0:
             self._player_1_territory.remove(i)
@@ -67,7 +80,7 @@ class Game:
         if old_value == new_value:
             return
         if track:
-            self._track(i, old_value, new_value)
+            self._undo_board_steps[i] = old_value
         self._board[i] = new_value
         self._update_territories(i, old_value, new_value)
 
