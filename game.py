@@ -13,47 +13,70 @@ dirs = (-5, 5, -1, 1)
 
 class Game:
     def __init__(self):
-        self.board = [0] * 25  # Initialize 5x5 board with zeros
-        self.is_player_1_turn = True
-        self.player_1_territory = PerfectSet()
-        self.player_2_territory = PerfectSet()
-        self.undo_board_steps = PerfectDict()
-        self.undo_p1_territory_steps = PerfectDict()
-        self.undo_p2_territory_steps = PerfectDict()
+        self._board = [0] * 25  # Initialize 5x5 board with zeros
+        self._is_player_1_turn = True
+        self._player_1_territory = PerfectSet()
+        self._player_2_territory = PerfectSet()
+        self._undo_board_steps = PerfectDict()
         self.turn_count = 0  # needed to calculate score in negamax
 
     def possible_next_moves(self):
-        if self.is_player_1_turn:
-            return self.player_1_territory
-        return self.player_2_territory
+        if self._is_player_1_turn:
+            return self._player_1_territory
+        return self._player_2_territory
 
     def play(self, move):
         if self.turn_count <= 1:  # first round
-            if self.board[move] != 0:
+            if self._board[move] != 0:
                 raise ValueError("Invalid first round move. Cell already occupied.")
-            multiplier = 1 if self.is_player_1_turn else -1
-            self.board[move] = 3 * multiplier
-            # Add first move to territory
-            if self.is_player_1_turn:
-                self.player_1_territory.add(move)
-            else:
-                self.player_2_territory.add(move)
+            multiplier = 1 if self._is_player_1_turn else -1
+            self._set(move, 3 * multiplier)
         else:
-            multiplier = 1 if self.is_player_1_turn else -1
-            if self.board[move] * multiplier <= 0:
+            multiplier = 1 if self._is_player_1_turn else -1
+            if self._board[move] * multiplier <= 0:
                 raise ValueError("Invalid move. Either opponent's or unclaimed cell.")
-            self.board[move] += multiplier
-            if abs(self.board[move]) < 4:
+            self._add(move, multiplier)
+            if abs(self._board[move]) < 4:
                 return
             spread_from = [move]
             while len(to_cleanup := self._do_step(spread_from)) > 0:
                 spread_from = to_cleanup
-        self.is_player_1_turn = not self.is_player_1_turn
+        self._is_player_1_turn = not self._is_player_1_turn
         self.turn_count += 1
+
+    def unplay(self):
+        for i, old_value in self._undo_board_steps.items():
+            self._set(i, old_value, track=False)
+        self._undo_board_steps.clear()
+        self._is_player_1_turn = not self._is_player_1_turn
+        self.turn_count -= 1
+
+    def _update_territories(self, i, old_value, new_value):
+        if new_value == 0:
+            self._player_1_territory.remove(i)
+            self._player_2_territory.remove(i)
+        elif old_value >= 0 and new_value < 0:
+            self._player_1_territory.remove(i)
+            self._player_2_territory.add(i)
+        elif old_value <= 0 and new_value > 0:
+            self._player_2_territory.remove(i)
+            self._player_1_territory.add(i)
+
+    def _set(self, i, new_value, track=True):
+        old_value = self._board[i]
+        if old_value == new_value:
+            return
+        if track:
+            self._track(i, old_value, new_value)
+        self._board[i] = new_value
+        self._update_territories(i, old_value, new_value)
+
+    def _add(self, i, value):
+        self._set(i, self._board[i] + value)
 
     def _do_step(self, spread_from):
         to_cleanup = []
-        multiplier = 1 if self.is_player_1_turn else -1
+        multiplier = 1 if self._is_player_1_turn else -1
 
         for i in spread_from:
             # Define adjacent cell conditions
@@ -69,29 +92,15 @@ class Game:
                 if not is_valid:
                     continue
                 j = i + offset
-                old_value = self.board[j]
-                self.board[j] = (
-                    self.board[j] * (1 if self.board[j] ^ multiplier >= 0 else -1)
-                    + multiplier
+                self._set(
+                    j,
+                    self._board[j] * (1 if self._board[j] ^ multiplier >= 0 else -1)
+                    + multiplier,
                 )
 
-                # Update territories based on new value
-                if old_value >= 0 and self.board[j] < 0:
-                    self.player_1_territory.remove(j)
-                    if not self.player_1_territory:
-                        return []
-                    self.player_2_territory.add(j)
-                elif old_value <= 0 and self.board[j] > 0:
-                    self.player_2_territory.remove(j)
-                    if not self.player_2_territory:
-                        return []
-                    self.player_1_territory.add(j)
-
-                if abs(self.board[j]) >= 4:
+                if abs(self._board[j]) >= 4:
                     to_cleanup.append(j)
 
             # cleanup cell and remove from territories
-            self.board[i] = 0
-            self.player_1_territory.remove(i)
-            self.player_2_territory.remove(i)
+            self._set(i, 0)
         return to_cleanup

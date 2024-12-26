@@ -94,3 +94,15 @@ class PerfectDict:
         while current:
             yield current.value
             current = current.next
+
+    def pop(self, key, default=None):
+        if key not in self:
+            return default
+        value = self[key]
+        del self[key]
+        return value
+
+    def clear(self):
+        self.head = None
+        self.pointers.clear()
+        self._size = 0
