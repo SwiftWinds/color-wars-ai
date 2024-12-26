@@ -37,10 +37,8 @@ def simulate_moves(moves):
 
 def main():
     with open("dataset.txt", "r") as f:
-        for line_num, line in enumerate(f, 1):
+        for line_num, line in enumerate(f):
             moves = line.strip()
-            if not moves:  # Skip empty lines
-                continue
 
             try:
                 board = simulate_moves(moves)
