@@ -11,50 +11,73 @@ class GameOverException(Exception):
 dirs = (-5, 5, -1, 1)
 
 
+def increment_turn(func):
+    def wrapper(self, *args, **kwargs):
+        result = func(self, *args, **kwargs)
+        self.turn_count += 1
+        return result
+
+    return wrapper
+
+
+def decrement_turn(func):
+    def wrapper(self, *args, **kwargs):
+        result = func(self, *args, **kwargs)
+        self.turn_count -= 1
+        return result
+
+    return wrapper
+
+
 class Game:
     def __init__(self):
         self._board = [0] * 25  # Initialize 5x5 board with zeros
-        self._is_player_1_turn = True
         self._player_1_territory = PerfectSet()
         self._player_2_territory = PerfectSet()
         self._undo_board_steps = PerfectDict()
         self.turn_count = 0  # needed to calculate score in negamax
 
     def possible_next_moves(self):
-        if self._is_player_1_turn:
+        if self.turn_count == 0:
+            return range(25)
+        if self.turn_count == 1:
+            return [i for i in range(25) if self._board[i] == 0]
+        if self.is_player_1_turn():
             return self._player_1_territory
         return self._player_2_territory
 
+    @increment_turn
     def play(self, move):
         if not 0 <= move < 25:
             raise ValueError("Invalid move. Cell out of bounds.")
         if self.turn_count <= 1:  # first round
             if self._board[move] != 0:
                 raise ValueError("Invalid first round move. Cell already occupied.")
-            multiplier = 1 if self._is_player_1_turn else -1
+            multiplier = 1 if self.is_player_1_turn() else -1
+            self._undo_board_steps.clear()
             self._set(move, 3 * multiplier)
         else:
-            multiplier = 1 if self._is_player_1_turn else -1
+            multiplier = 1 if self.is_player_1_turn() else -1
             if self._board[move] * multiplier <= 0:
                 raise ValueError("Invalid move. Either opponent's or unclaimed cell.")
+            self._undo_board_steps.clear()
             self._add(move, multiplier)
             if abs(self._board[move]) < 4:
                 return
             spread_from = [move]
             while len(to_cleanup := self._do_step(spread_from)) > 0:
                 spread_from = to_cleanup
-        self._is_player_1_turn = not self._is_player_1_turn
-        self.turn_count += 1
 
+    @decrement_turn
     def unplay(self):
         for i, old_value in self._undo_board_steps.items():
             self._set(i, old_value, track=False)
-        self._undo_board_steps.clear()
-        self._is_player_1_turn = not self._is_player_1_turn
-        self.turn_count -= 1
+
+    def is_player_1_turn(self):
+        return self.turn_count % 2 == 0
 
     def _track(self, i, old_value, new_value):
-        return_to_value = self._undo_board_steps[old_value]
+        return_to_value = self._undo_board_steps.get(i, None)
 
         # Case 1: No edits tracked yet (returnToValue is None)
         if return_to_value is None:
@@ -80,7 +103,7 @@ class Game:
         if old_value == new_value:
             return
         if track:
-            self._undo_board_steps[i] = old_value
+            self._track(i, old_value, new_value)
         self._board[i] = new_value
         self._update_territories(i, old_value, new_value)
 
@@ -89,7 +112,7 @@ class Game:
 
     def _do_step(self, spread_from):
         to_cleanup = []
-        multiplier = 1 if self._is_player_1_turn else -1
+        multiplier = 1 if self.is_player_1_turn() else -1
 
         for i in spread_from:
             # Define adjacent cell conditions

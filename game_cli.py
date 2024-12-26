@@ -42,7 +42,15 @@ def main():
 
     while True:
         print_board(game._board)
-        current_player = "1" if game._is_player_1_turn else "2"
+        current_player = 1 if game.is_player_1_turn() else 2
+
+        # Check if current player has any valid moves
+        if not game.possible_next_moves():
+            # Current player has no moves, so the other player wins
+            winner = 2 if game.is_player_1_turn() else 1
+            print(f"Game over! Player {winner} wins!")
+            break
+
         print(f"Player {current_player}'s turn")
 
         try:
@@ -51,9 +59,6 @@ def main():
         except ValueError as e:
             print(f"Invalid move: {e}")
             continue
-        except Exception as e:
-            print(f"Game over! {e}")
-            break
 
 
 if __name__ == "__main__":

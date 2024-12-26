@@ -78,7 +78,7 @@ class PerfectDict:
         current = self.head
         while current:
             yield current.key
-        current = current.next
+            current = current.next
 
     def items(self):
         current = self.head
@@ -95,6 +95,11 @@ class PerfectDict:
             yield current.value
             current = current.next
 
+    def get(self, key, default=None):
+        if key not in self:
+            return default
+        return self[key]
+
     def pop(self, key, default=None):
         if key not in self:
             return default
@@ -103,6 +108,9 @@ class PerfectDict:
         return value
 
     def clear(self):
+        if self._size == 0:
+            return
+        for key in self.keys():
+            self.pointers[key] = None
         self.head = None
-        self.pointers.clear()
         self._size = 0
