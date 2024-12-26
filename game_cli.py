@@ -23,13 +23,16 @@ def get_move():
     """Get a valid move from the user."""
     while True:
         try:
-            print("Enter row (0-4) and column (0-4) separated by space: ")
-            row, col = map(int, input().split())
+            print("Enter row (0-4) and column (0-4) separated by space, or 'u' to undo: ")
+            move = input().strip()
+            if move.lower() == 'u':
+                return 'undo'
+            row, col = map(int, move.split())
             if 0 <= row <= 4 and 0 <= col <= 4:
                 return row * 5 + col
             print("Invalid coordinates. Must be between 0 and 4.")
         except ValueError:
-            print("Invalid input. Please enter two numbers separated by space.")
+            print("Invalid input. Please enter two numbers separated by space or 'u'.")
 
 
 def main():
@@ -39,6 +42,7 @@ def main():
     print("Player 1: Blue (+)")
     print("Player 2: Red (-)")
     print("Enter moves as 'row col' (e.g., '2 3' for row 2, column 3)")
+    print("Enter 'u' to undo last move")
 
     while True:
         print_board(game._board)
@@ -55,6 +59,12 @@ def main():
 
         try:
             move = get_move()
+            if move == 'undo':
+                if game.turn_count > 0:
+                    game.unplay()
+                else:
+                    print("Cannot undo at the start of the game!")
+                continue
             game.play(move)
         except ValueError as e:
             print(f"Invalid move: {e}")
