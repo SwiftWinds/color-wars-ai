@@ -16,7 +16,7 @@ def nth_letter(n):
     return chr(ord("a") + n)
 
 
-def process_game(moves, time_limit=5):
+def process_game(moves, time_limit=5000000):
     game = Game()
 
     # Play all moves except the last one

@@ -17,11 +17,12 @@ def negamax(P, alpha, beta):
     for x in P.possible_next_moves():
         P.play(x)
         if not P.possible_next_moves():
-            return InvertedInt(P.turn_count)
+            P.unplay()
+            return InvertedInt(P.turn_count // 2 + 1)
         P.unplay()
 
-    max_score = InvertedInt(P.turn_count + 2)
-    if beta >= max_score:
+    max_score = InvertedInt(P.turn_count // 2 + 2)
+    if beta > max_score:
         beta = max_score
         if alpha >= beta:
             return beta
@@ -42,11 +43,15 @@ def get_ai_move(P):
     positions_evaluated = 0  # Reset counter
     start_time = time.time()  # Start timing
 
-    best_score = InvertedInt(-P.turn_count)
+    best_score = InvertedInt(-max(P.turn_count // 2, 1))
     best_move = None
     for x in P.possible_next_moves():
         P.play(x)
-        score = -negamax(P)
+        score = -negamax(
+            P,
+            InvertedInt(-max(P.turn_count // 2, 1)),
+            InvertedInt(max(P.turn_count // 2, 1)),
+        )
         P.unplay()
         if score > best_score:
             best_score = score
