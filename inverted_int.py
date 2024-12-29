@@ -12,10 +12,6 @@ class InvertedInt:
         return self.value == other.value
 
     def __lt__(self, other):
-        if self.value == 0 and other.value != 0:
-            return True
-        elif self.value != 0 and other.value == 0:
-            return False
         return (
             self.value > other.value
             if self.value ^ other.value >= 0

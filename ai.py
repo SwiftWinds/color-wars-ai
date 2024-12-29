@@ -16,8 +16,10 @@ def static_eval(P, maximizing_player):
         theirs += -P._board[territory]
     if not maximizing_player:
         ours, theirs = theirs, ours
-    eval = InvertedInt((P.turn_count + 1) // 2 + (72 - (ours - theirs)))
-    return eval
+    eval = ours - theirs
+    if eval > 0 and P.turn_count % 2 == 1 or eval < 0 and P.turn_count % 2 == 0:
+        return InvertedInt(-(P.turn_count + eval))
+    return InvertedInt(P.turn_count + eval)
 
 
 def minimax(P, alpha, beta, depth=10, maximizing_player=True):
@@ -29,13 +31,13 @@ def minimax(P, alpha, beta, depth=10, maximizing_player=True):
     positions_evaluated += 1
 
     if not P.possible_next_moves():
-        return InvertedInt((P.turn_count + 1) // 2)
+        return InvertedInt(P.turn_count * (-1 if maximizing_player else 1))
 
     if depth <= 0:
         return static_eval(P, maximizing_player)
 
     if maximizing_player:
-        best_score = InvertedInt(-max(P.turn_count // 2, 1))
+        best_score = InvertedInt(-max(P.turn_count, 1))
         for x in P.possible_next_moves():
             P.play(x)
             score = minimax(P, alpha, beta, depth - 1, False)
@@ -46,7 +48,7 @@ def minimax(P, alpha, beta, depth=10, maximizing_player=True):
                 break
         return best_score
     else:
-        best_score = InvertedInt(max(P.turn_count // 2, 1))
+        best_score = InvertedInt(P.turn_count)
         for x in P.possible_next_moves():
             P.play(x)
             score = minimax(P, alpha, beta, depth - 1, True)
@@ -63,26 +65,34 @@ def get_ai_move(P):
     positions_evaluated = 0
     start_time = time.time()
 
-    best_score = (
-        InvertedInt(-max(P.turn_count // 2, 1))
-        if P.turn_count % 2 == 0
-        else InvertedInt(max(P.turn_count // 2, 1))
-    )
+    best_score = InvertedInt(-1) if P.turn_count % 2 == 0 else InvertedInt(0)
     best_move = None
-    for x in P.possible_next_moves():
-        P.play(x)
-        score = minimax(
-            P,
-            InvertedInt(-max(P.turn_count // 2, 1)),
-            InvertedInt(max(P.turn_count // 2, 1)),
-            10,
-            True if P.turn_count % 2 == 0 else False,
-        )
-        P.unplay()
-        if score > best_score:
-            best_score = score
-            best_move = x
-        print(f"score: {score}")
+    alpha = InvertedInt(-1)
+    beta = InvertedInt(0)
+    if P.turn_count % 2 == 0:
+        best_score = InvertedInt(-max(P.turn_count, 1))
+        for x in P.possible_next_moves():
+            P.play(x)
+            score = minimax(P, alpha, beta, 10, False)
+            P.unplay()
+            if score > best_score:
+                best_score = score
+                best_move = x
+            alpha = max(alpha, score)
+            if beta <= alpha:
+                break
+    else:
+        best_score = InvertedInt(P.turn_count)
+        for x in P.possible_next_moves():
+            P.play(x)
+            score = minimax(P, alpha, beta, 10, True)
+            P.unplay()
+            if score < best_score:
+                best_score = score
+                best_move = x
+            beta = min(beta, score)
+            if beta <= alpha:
+                break
 
     # Calculate metrics
     end_time = time.time()
